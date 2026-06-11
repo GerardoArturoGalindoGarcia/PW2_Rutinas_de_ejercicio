@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.ArrayList, java.io.*" %>
 <%
     // CONTROL DE SEGURIDAD: Si no se ha logueado, lo mandamos al login
     if (session.getAttribute("usuarioLogueado") == null) {
@@ -7,21 +7,71 @@
         return;
     }
 
-    // Inicializar la lista de favoritos en la sesión si no existe
+    // Identificar usuario para persistencia
+    String usuarioLog = (String) session.getAttribute("usuarioLogueado");
+
+    // Directorio para guardar datos persistentes dentro de WEB-INF
+    String dataDirPath = application.getRealPath("/WEB-INF/data");
+    File dataDir = new File(dataDirPath);
+    if (!dataDir.exists()) {
+        dataDir.mkdirs();
+    }
+
+    // Archivo de favoritos por usuario
+    File favFile = new File(dataDir, usuarioLog + "_favoritos.txt");
+
+    // Inicializar la lista de favoritos: cargar desde archivo si existe
     ArrayList<String> favoritos = (ArrayList<String>) session.getAttribute("favoritos");
     if (favoritos == null) {
         favoritos = new ArrayList<>();
+        // Si existe archivo, leer las líneas
+        if (favFile.exists()) {
+            BufferedReader br = null;
+            try {
+                br = new BufferedReader(new FileReader(favFile));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty() && !favoritos.contains(line)) {
+                        favoritos.add(line);
+                    }
+                }
+            } catch (IOException e) {
+                // en caso de error de lectura, iniciamos con lista vacía
+            } finally {
+                if (br != null) try { br.close(); } catch (IOException ignore) {}
+            }
+        }
         session.setAttribute("favoritos", favoritos);
     }
 
     // Capturar si el usuario quiere agregar o eliminar un favorito
     String nuevaFav = request.getParameter("agregarFavorito");
     String eliminarFav = request.getParameter("eliminarFavorito");
+    boolean changed = false;
     // Procesar eliminación primero si existe la petición
     if (eliminarFav != null && favoritos.contains(eliminarFav)) {
         favoritos.remove(eliminarFav);
+        changed = true;
     } else if (nuevaFav != null && !favoritos.contains(nuevaFav)) {
         favoritos.add(nuevaFav);
+        changed = true;
+    }
+
+    // Si hubo cambios, persistir la lista al archivo
+    if (changed) {
+        BufferedWriter bw = null;
+        try {
+            bw = new BufferedWriter(new FileWriter(favFile, false)); // sobrescribe
+            for (String f : favoritos) {
+                bw.write(f);
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            // ignorar fallos de persistencia en esta demo
+        } finally {
+            if (bw != null) try { bw.close(); } catch (IOException ignore) {}
+        }
     }
 
     // Capturar el filtro de tipo de ejercicio (Cardio o Fuerza)
