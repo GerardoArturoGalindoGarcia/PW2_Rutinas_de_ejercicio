@@ -35,8 +35,8 @@
     %>
 
     <form action="index.jsp" method="POST">
-        <input type="text" name="usuario" placeholder="Usuario (admin)" required>
-        <input type="password" name="clave" placeholder="Contraseña (1234)" required>
+        <input type="text" name="usuario" placeholder="Usuario " required>
+        <input type="password" name="clave" placeholder="Contraseña "required>
         <button type="submit">Ingresar</button>
     </form>
 </div>
